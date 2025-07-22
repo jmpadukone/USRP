@@ -94,6 +94,9 @@ void Init (double *v, double x, double y, double z)
   v[BX3] = 0.0;
 
 
+  g_smallDensity  = 1e-4;
+  g_smallPressure = 1e-4; 
+
   first_call = 0;
 }
 
@@ -120,6 +123,48 @@ void Analysis (const Data *d, Grid *grid)
  *
  *********************************************************************** */
 {
+  int   i, j, k, nv;
+  double  *x1, *x2, *x3;
+  x1 = grid->x[IDIR];
+  x2 = grid->x[JDIR];
+  x3 = grid->x[KDIR];
+
+  int  Ntot = 0;
+  double vol = 0., dvol, Bx = 0., By = 0., Bz = 0., Bperp = 0.;
+  double Bx2 = 0., By2 = 0., Bz2 = 0., Bperp2 = 0.;
+    
+  DOM_LOOP(k,j,i){
+
+    vol = vol +  grid->dV[k][j][i];
+    Bx2  = Bx2 + pow(d->Vc[BX1][k][j][i],2.);
+    By2  = By2 + pow(d->Vc[BX2][k][j][i],2.);
+    Bz2  = Bz2 + pow(d->Vc[BX3][k][j][i],2.);
+
+    Bperp2 = Bperp2 +  pow(d->Vc[BX2][k][j][i],2.) + pow(d->Vc[BX3][k][j][i],2.);
+
+    Ntot = Ntot + 1;
+  }
+
+  Bx = sqrt(Bx2/Ntot);
+  By = sqrt(By2/Ntot);
+  Bz = sqrt(Bz2/Ntot);
+  Bperp = sqrt(Bperp2/Ntot);
+
+   
+  FILE *fp;
+  char filename[512];
+  sprintf(filename, "%s/analysis.out", RuntimeGet()->output_dir);
+
+  if(g_stepNumber ==0){
+    fp = fopen(filename, "w");
+    fprintf(fp,"#[1] time, [2]Bx, [3]By, [4]Bz, [5]Bperp\n");
+    
+  } else{
+    fp = fopen(filename, "a");
+    fprintf(fp,"%0.5e %0.8e %0.8e %0.8e %0.8e\n", g_time, Bx, By, Bz, Bperp); 
+    fclose(fp);
+  }
+
 }
 #if PHYSICS == MHD
 /* ********************************************************************* */
